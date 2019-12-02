@@ -4,13 +4,16 @@ import { Link } from 'react-router-dom';
 
 import api from '../../services/api';
 
-import { Container, Form, SubmitButton, List } from './styles';
+import Container from '../Components/Container';
+
+import { Form, SubmitButton, List } from './styles';
 
 export default class Main extends Component {
     state = {
         newRepo: '',
         repositories: [],
         loading: false,
+        error: false,
     };
 
     componentDidMount() {
@@ -36,32 +39,45 @@ export default class Main extends Component {
     handleSubmit = async e => {
         e.preventDefault();
 
-        this.setState({ loading: true });
+        try {
+            this.setState({ loading: true });
 
-        const { newRepo, repositories } = this.state;
+            const { newRepo, repositories } = this.state;
 
-        const reponse = await api.get(`/repos/${newRepo}`);
+            const isRepoValid = repositories.every(
+                repository => repository.name !== newRepo
+            );
 
-        const data = {
-            name: reponse.data.full_name,
-        };
+            if (!isRepoValid) {
+                throw new Error('Repositório duplicado!');
+            }
 
-        this.setState({
-            repositories: [...repositories, data],
-            newRepo: '',
-            loading: false,
-        });
+            const reponse = await api.get(`/repos/${newRepo}`);
+
+            const data = {
+                name: reponse.data.full_name,
+            };
+
+            this.setState({
+                repositories: [...repositories, data],
+                newRepo: '',
+                loading: false,
+                error: false,
+            });
+        } catch (error) {
+            this.setState({ error: true, loading: false });
+        }
     };
 
     render() {
-        const { newRepo, repositories, loading } = this.state;
+        const { newRepo, repositories, loading, error } = this.state;
         return (
             <Container>
                 <h1>
                     <FaGithubAlt />
                     Repositórios
                 </h1>
-                <Form onSubmit={this.handleSubmit}>
+                <Form onSubmit={this.handleSubmit} error={error}>
                     <input
                         type="text"
                         placeholder="Adicionar repositório"
