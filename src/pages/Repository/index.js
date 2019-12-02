@@ -4,7 +4,13 @@ import { Link } from 'react-router-dom';
 
 import api from '../../services/api';
 import Container from '../Components/Container';
-import { Loading, Owner, IssueList } from './styles';
+import {
+    Loading,
+    Owner,
+    IssueList,
+    IssueFilter,
+    IssuePagination,
+} from './styles';
 
 export default class Repository extends Component {
     static propTypes = {
@@ -16,9 +22,12 @@ export default class Repository extends Component {
     };
 
     state = {
+        repoName: '',
         repository: {},
         issues: [],
         loading: true,
+        issueFilter: 'open',
+        issuePage: 1,
     };
 
     async componentDidMount() {
@@ -35,11 +44,52 @@ export default class Repository extends Component {
             repository: repository.data,
             issues: issues.data,
             loading: false,
+            repoName,
         });
     }
 
+    handleIssueFilter = async e => {
+        const issueFilter = e.target.value;
+
+        const { repoName } = this.state;
+
+        const issues = await api.get(
+            `repos/${repoName}/issues?state=${issueFilter}`
+        );
+
+        this.setState({
+            issueFilter,
+            issues: issues.data,
+        });
+    };
+
+    handlePagination = async e => {
+        const issuePage = e.target.value;
+
+        const { repoName, issueFilter } = this.state;
+
+        const issues = await api.get(
+            `repos/${repoName}/issues?state=${issueFilter}&page=${issuePage}`
+        );
+
+        console.log(
+            `repos/${repoName}/issues?state=${issueFilter}&page=${issuePage}`
+        );
+
+        this.setState({
+            issues: issues.data,
+            issuePage,
+        });
+    };
+
     render() {
-        const { repository, issues, loading } = this.state;
+        const {
+            repository,
+            issues,
+            loading,
+            issueFilter,
+            issuePage,
+        } = this.state;
 
         if (loading) {
             return <Loading>Carregando</Loading>;
@@ -56,6 +106,15 @@ export default class Repository extends Component {
                     <h1>{repository.name}</h1>
                     <p>{repository.description}</p>
                 </Owner>
+
+                <IssueFilter
+                    onChange={this.handleIssueFilter}
+                    value={issueFilter}
+                >
+                    <option value="open">Aberta</option>
+                    <option value="closed">Fechada</option>
+                    <option value="all">Todas</option>
+                </IssueFilter>
 
                 <IssueList>
                     {issues.map(issue => (
@@ -79,6 +138,22 @@ export default class Repository extends Component {
                         </li>
                     ))}
                 </IssueList>
+                <IssuePagination>
+                    <button
+                        type="button"
+                        onClick={this.handlePagination}
+                        value={Number(issuePage) - 1}
+                    >
+                        Anterior
+                    </button>
+                    <button
+                        type="button"
+                        onClick={this.handlePagination}
+                        value={Number(issuePage) + 1}
+                    >
+                        Próxima
+                    </button>
+                </IssuePagination>
             </Container>
         );
     }
